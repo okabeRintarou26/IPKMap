@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="IPKMap - Tool wajib mahasiswa buat ngitung IPK & IPS. Gak usah pusing, tinggal masukin nilai!">
+    <meta name="theme-color" content="#00d4ff">
+    <title>IPKMap - Jangan Sampe IPK Lo Anjlok! 📉</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .course-name-group[data-hidden="true"] {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1 class="title">🗺️ IPKMap</h1>
+            <p class="subtitle">Biar lo gak kaget pas liat KHS. Planning is everything, Bestie! 💅</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="nav-section" role="region" aria-label="Pilihan Kalkulator">
+            <button class="btn btn-primary btn-lg" id="btnIPK" aria-label="Buka kalkulator IPK">
+                <span class="btn-icon" aria-hidden="true">🎓</span>
+                <span>Hitung IPK Kumulatif</span>
+            </button>
+            <button class="btn btn-secondary btn-lg" id="btnIPS" aria-label="Buka kalkulator IPS">
+                <span class="btn-icon" aria-hidden="true">📈</span>
+                <span>Hitung IPS Semester Ini</span>
+            </button>
+        </section>
+
+        <section id="ipkSection" class="calculator-section hidden" role="region" aria-label="Kalkulator IPK">
+            <h2 class="section-title">🎯 Kalkulator IPK - Cek Perjalanan Akademik Lo</h2>
+            
+            <div class="method-selection" role="group" aria-labelledby="ipk-method-heading">
+                <h3 id="ipk-method-heading">Mau Ngitung Pake Cara Mana?</h3>
+                <div class="radio-group">
+                    <label class="radio-label">
+                        <input type="radio" name="ipkMethod" value="perCourse" checked onchange="toggleIPKMethod()">
+                        <span>Input Satu-satu (Detail Banget)</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="ipkMethod" value="previousSemester" onchange="toggleIPKMethod()">
+                        <span>Cuma Total Saja (Kaum Rebahan)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="ipkSksGroupingSection" class="sks-grouping-selection" data-method="ipk" role="group" aria-labelledby="sks-grouping-heading">
+                <h3 id="sks-grouping-heading">📚 Atur Beban SKS Per Semester</h3>
+                <p class="info-text">💡 Jangan serakah ambil SKS banyak tapi nilai E semua. Realistis aja, Bestie!</p>
+                
+                <div class="radio-group" style="margin-bottom: 20px;">
+                    <label class="radio-label">
+                        <input type="radio" name="ipkSksMode" value="auto" checked onchange="toggleSksMode('ipk')">
+                        <span>Otomatis (18-24 SKS - Standar Mahasiswa Rajin)</span>
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="ipkSksMode" value="manual" onchange="toggleSksMode('ipk')">
+                        <span>Manual (Gue Tahu Kemampuan Gue)</span>
+                    </label>
+                </div>
+
+                <div id="manualSksGlobalSettings" class="hidden" style="background: rgba(0, 212, 255, 0.05); padding: 15px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid var(--primary-color);">
+                    <p class="info-text">💡 Atur sendiri batas SKS lo. Tapi inget, jangan sampe lo burnout ya!</p>
+                </div>
+                
+                <div class="semester-info" role="region" aria-label="Informasi batasan akademik">
+                    <p>📌 Maksimal <strong>14 Semester</strong> (Kalo lebih dari itu, udah waktunya evaluasi diri) | SKS per MK <strong>1-6 SKS</strong> | Total SKS <strong>160 SKS</strong></p>
+                    <p id="currentSemesterCount">Semester lo sekarang: 1</p>
+                    <p id="totalSksCount">Progress SKS: 0/160 (Masih panjang, Semangat!)</p>
+                </div>
+            </div>
+
+            <div class="display-toggle-section" data-method="ipk" role="group" aria-labelledby="ipk-display-heading">
+                <h3 id="ipk-display-heading">⚙️ Pengaturan Tampilan</h3>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="showCourseNameIPK" checked onchange="toggleCourseNameDisplay('ipk')">
+                        <span>Tampilin Nama Mata Kuliah (Biar Gak Lupa)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="ipkPerCourseMethod" class="method-content" data-method="ipk">
+                <h3>📝 Input Mata Kuliah Lo</h3>
+                <div class="form-info">
+                    <p>💡 Masukin SKS dan nilai lo. Kalo nilainya jelek, jangan marah-marah sama aplikasinya ya!</p>
+                </div>
+                
+                <div id="ipkSemesterContainer" class="semester-container" role="region" aria-label="Data per semester">
+                    <div class="semester-group" data-semester="1" data-method="ipk">
+                        <div class="semester-header">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                                    <h4 style="margin: 0;">📖 Semester 1</h4>
+                                    <button type="button" class="btn btn-danger btn-small" onclick="removeSemester(this)" title="Hapus semester ini" aria-label="Hapus semester 1">
+                                        🗑️ Hapus
+                                    </button>
+                                </div>
+                                <div class="semester-sks-max-container">
+                                    <div class="semester-sks-max-input">
+                                        <label for="max-sks-1" style="color: var(--text-secondary); font-size: 0.85em; font-weight: 500; white-space: nowrap; flex-shrink: 0;">Batas SKS:</label>
+                                        <input type="number" id="max-sks-1" class="semester-max-sks-input" value="18" min="18" max="24" onchange="updateSemesterMax(this)" aria-label="Batas maksimal SKS semester 1">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sks-counter" aria-live="polite">
+                                <span>SKS: <span class="semester-sks-count">0</span>/<span class="semester-sks-max">18</span></span>
+                            </div>
+                        </div>
+                        <div id="ipkCourseList" class="course-list" data-method="ipk" role="region" aria-label="Daftar mata kuliah semester 1">
+                            <div class="course-item" data-method="ipk">
+                                <div class="form-row">
+                                    <div class="form-group course-name-group" data-method="ipk">
+                                        <label for="course-name-1">Nama MK (Opsional)</label>
+                                        <input type="text" id="course-name-1" class="courseName" placeholder="Contoh: Kalkulus I (yang bikin pusing)" data-method="ipk">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="sks-1">SKS <span class="required">*</span></label>
+                                        <input type="number" id="sks-1" class="sks" placeholder="3" min="1" max="6" required onchange="updateSemesterSks('ipk')">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="grade-1">Nilai <span class="required">*</span></label>
+                                        <input type="text" id="grade-1" class="grade" list="gradeList" placeholder="A / 4.0 (amin)">
+                                    </div>
+                                    <div class="form-group btn-delete-wrapper">
+                                        <button type="button" class="btn btn-danger btn-small remove-course" onclick="removeCourse(this, 'ipk')" aria-label="Hapus mata kuliah">
+                                            ✕ Hapus
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-info add-course-semester" onclick="addCourse('ipkCourseList', 'ipk')" aria-label="Tambah mata kuliah ke semester 1">
+                            ➕ Tambah MK Lagi
+                        </button>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-primary" id="addSemesterIPK" onclick="addSemester('ipk')" aria-label="Tambah semester baru">
+                    ➕ Tambah Semester (Doain cepet lulus)
+                </button>
+
+                <button type="button" class="btn btn-primary btn-lg" id="calculateIPK" onclick="calculateIPK()">
+                    🧮 Hitung IPK (Moment of truth)
+                </button>
+            </div>
+
+            <div id="ipkPreviousSemesterMethod" class="method-content hidden" data-method="ipkPrev">
+                <h3>📊 Data Semester Lalu + Semester Ini</h3>
+                <p class="info-text">💡 Buat lo yang males input satu-satu. Tapi inget, hasil gak akan bohong!</p>
+                
+                <div class="form-section">
+                    <h4>📚 Riwayat Akademik (Masa Lalu)</h4>
+                    <div class="form-row" style="grid-template-columns: 1fr 1fr;">
+                        <div class="form-group">
+                            <label for="prevTotalGrade">Total Mutu Sebelumnya <span class="required">*</span></label>
+                            <input type="number" id="prevTotalGrade" placeholder="Contoh: 145.5" step="0.1" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="prevTotalSks">Total SKS Sebelumnya <span class="required">*</span></label>
+                            <input type="number" id="prevTotalSks" placeholder="Contoh: 70" step="1" min="1" max="160" onchange="calculateEstimatedSemesters()">
+                        </div>
+                    </div>
+                    <div id="prevSemesterInfo" class="semester-info hidden" role="region" aria-live="polite">
+                        <p id="calculatedSemesters">Estimasi Semester: - (Kalo lama lulus, jangan nangis)</p>
+                    </div>
+                </div>
+
+                <div class="display-toggle-section" data-method="ipkPrev" role="group" aria-labelledby="ipkprev-display-heading">
+                    <h3 id="ipkprev-display-heading">⚙️ Pengaturan Tampilan</h3>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="showCourseNameIPKPrev" checked onchange="toggleCourseNameDisplay('ipkPrev')">
+                            <span>Tampilin Nama Mata Kuliah</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4>➕ MK Semester Ini (Yang Lagi Lo Ambil)</h4>
+                    <p class="info-text">💡 Masukin MK yang lagi lo ambil. Semoga nilainya bagus, amin! 🤲</p>
+                    <div id="ipkPrevCourseList" class="course-list" data-method="ipkPrev" role="region" aria-label="Daftar mata kuliah baru">
+                        <div class="course-item" data-method="ipkPrev">
+                            <div class="form-row">
+                                <div class="form-group course-name-group" data-method="ipkPrev">
+                                    <label for="course-name-prev-1">Nama MK (Opsional)</label>
+                                    <input type="text" id="course-name-prev-1" class="courseName" placeholder="Contoh: Algoritma (yang susah itu)" data-method="ipkPrev">
+                                </div>
+                                <div class="form-group">
+                                    <label for="sks-prev-1">SKS <span class="required">*</span></label>
+                                    <input type="number" id="sks-prev-1" class="sks" placeholder="3" min="1" max="6">
+                                </div>
+                                <div class="form-group">
+                                    <label for="grade-prev-1">Nilai <span class="required">*</span></label>
+                                    <input type="text" id="grade-prev-1" class="grade" list="gradeList" placeholder="A / 4.0 (yakin?)">
+                                </div>
+                                <div class="form-group btn-delete-wrapper">
+                                    <button type="button" class="btn btn-danger btn-small remove-course" onclick="removeCourse(this, 'ipkPrev')" aria-label="Hapus mata kuliah">
+                                        ✕ Hapus
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-info" id="addCourseIPKPrev" onclick="addCourse('ipkPrevCourseList', 'ipkPrev')" aria-label="Tambah mata kuliah baru">
+                        ➕ Tambah MK Lagi
+                    </button>
+                </div>
+
+                <button type="button" class="btn btn-primary btn-lg" id="calculateIPKPrev" onclick="calculateIPKPrev()">
+                    🧮 Hitung IPK Terbaru (Siap-siap mental)
+                </button>
+            </div>
+
+            <div class="target-section" role="region" aria-labelledby="target-heading">
+                <h3 id="target-heading">🎯 Target IPK (Jangan Muluk-muluk)</h3>
+                <div class="form-row" style="grid-template-columns: 1fr 1fr;">
+                    <div class="form-group">
+                        <label for="targetIPK">Target IPK Lulusan</label>
+                        <input type="number" id="targetIPK" placeholder="Contoh: 3.50 (realistis dong)" step="0.01" min="0" max="4">
+                    </div>
+                    <div class="form-group">
+                        <button type="button" class="btn btn-success" id="calculateTargetIPK" onclick="calculateTargetIPK()" style="align-self: flex-end; width: 100%;">
+                            📊 Cek Apakah Mungkin
+                        </button>
+                    </div>
+                </div>
+                <div id="targetIPKResult" class="result-box hidden" role="region" aria-live="polite"></div>
+            </div>
+
+            <div id="ipkResults" class="results-section hidden" role="region" aria-labelledby="ipk-results-heading" aria-live="polite">
+                <h3 id="ipk-results-heading">📊 Hasil Perhitungan (Jangan Pingsan)</h3>
+                <div class="result-box">
+                    <div class="result-item">
+                        <span class="result-label">IPK Lo:</span>
+                        <span class="result-value" id="ipkValue">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Total SKS:</span>
+                        <span class="result-value" id="totalSksIPK">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Total Mutu:</span>
+                        <span class="result-value" id="totalGradeIPK">-</span>
+                    </div>
+                </div>
+
+                <div id="ipkChartContainer" class="chart-container hidden" role="region" aria-label="Grafik perkembangan IPK">
+                    <h4>📈 Grafik IPK Lo (Naik atau Turun?)</h4>
+                    <canvas id="ipkChart" aria-label="Grafik perkembangan IPK per semester"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="ipsSection" class="calculator-section hidden" role="region" aria-label="Kalkulator IPS">
+            <h2 class="section-title">📈 Kalkulator IPS - Gimana Semester Ini?</h2>
+            
+            <div class="form-info">
+                <p>💡 Hitung IPS semester ini. Kalo jelek, masih ada semester depan buat perbaikan!</p>
+                <p class="info-text">⚠️ <strong>Catatan:</strong> SKS per MK 1-6. Jangan ngaco!</p>
+            </div>
+
+            <div class="display-toggle-section" data-method="ips" role="group" aria-labelledby="ips-display-heading">
+                <h3 id="ips-display-heading">⚙️ Pengaturan Tampilan</h3>
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="showCourseNameIPS" checked onchange="toggleCourseNameDisplay('ips')">
+                        <span>Tampilin Nama Mata Kuliah</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>📝 Input MK Semester Ini</h3>
+                
+                <div id="ipsCourseList" class="course-list" data-method="ips" role="region" aria-label="Daftar mata kuliah semester ini">
+                    <div class="course-item" data-method="ips">
+                        <div class="form-row">
+                            <div class="form-group course-name-group" data-method="ips">
+                                <label for="course-name-ips-1">Nama MK (Opsional)</label>
+                                <input type="text" id="course-name-ips-1" class="courseName" placeholder="Contoh: Basis Data (yang sering error)" data-method="ips">
+                            </div>
+                            <div class="form-group">
+                                <label for="sks-ips-1">SKS <span class="required">*</span></label>
+                                <input type="number" id="sks-ips-1" class="sks" placeholder="3" min="1" max="6" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="grade-ips-1">Nilai <span class="required">*</span></label>
+                                <input type="text" id="grade-ips-1" class="grade" list="gradeList" placeholder="A / 4.0 (semoga)">
+                            </div>
+                            <div class="form-group btn-delete-wrapper">
+                                <button type="button" class="btn btn-danger btn-small remove-course" onclick="removeCourse(this, 'ips')" aria-label="Hapus mata kuliah">
+                                    ✕ Hapus
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-info" id="addCourseIPS" onclick="addCourse('ipsCourseList', 'ips')" aria-label="Tambah mata kuliah">
+                    ➕ Tambah MK Lagi
+                </button>
+
+                <button type="button" class="btn btn-primary btn-lg" id="calculateIPS" onclick="calculateIPS()">
+                    🧮 Hitung IPS (Liat hasilnya)
+                </button>
+            </div>
+
+            <div id="ipsResults" class="results-section hidden" role="region" aria-labelledby="ips-results-heading" aria-live="polite">
+                <h3 id="ips-results-heading">📊 Hasil IPS Semester Ini</h3>
+                <div class="result-box">
+                    <div class="result-item">
+                        <span class="result-label">IPS Lo:</span>
+                        <span class="result-value" id="ipsValue">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Total SKS:</span>
+                        <span class="result-value" id="totalSksIPS">-</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Total Mutu:</span>
+                        <span class="result-value" id="totalGradeIPS">-</span>
+                    </div>
+                </div>
+
+                <div id="ipsChartContainer" class="chart-container" role="region" aria-label="Grafik distribusi nilai">
+                    <h4>📈 Distribusi Nilai (Sebaran Nilai Lo)</h4>
+                    <canvas id="ipsChart" aria-label="Grafik distribusi nilai mata kuliah"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <datalist id="gradeList">
+            <option value="A">A (4.0) - Perfect! 🎉</option>
+            <option value="A-">A- (3.7) - Hampir sempurna</option>
+            <option value="B+">B+ (3.3) - Lumayan lah</option>
+            <option value="B">B (3.0) - Standar mahasiswa</option>
+            <option value="B-">B- (2.7) - Perlu improvement</option>
+            <option value="C+">C+ (2.3) - Hampir gagal</option>
+            <option value="C">C (2.0) - Pas-pasan</option>
+            <option value="D">D (1.0) - Fix mengulang</option>
+            <option value="E">E (0.0) - Yakin kuliah? 😭</option>
+            <option value="4.0">4.0</option>
+            <option value="3.7">3.7</option>
+            <option value="3.3">3.3</option>
+            <option value="3.0">3.0</option>
+            <option value="2.7">2.7</option>
+            <option value="2.3">2.3</option>
+            <option value="2.0">2.0</option>
+            <option value="1.0">1.0</option>
+            <option value="0.0">0.0</option>
+        </datalist>
+
+        <div id="errorMessage" class="alert alert-error hidden" role="alert" aria-live="assertive"></div>
+        <div id="successMessage" class="alert alert-success hidden" role="status" aria-live="polite"></div>
+    </main>
+
+    <footer class="footer" role="contentinfo">
+        <div class="footer-content">
+            <p>&copy; 2026 <strong>IPKMap</strong> - Dibuat buat lo yang mau lulus tepat waktu (amiin)</p>
+            <p style="font-size: 0.9em; color: var(--text-secondary);">Dikode dengan ☕ dan 😭 oleh <strong>Adz</strong></p>
+            <p style="font-size: 0.85em; color: var(--text-secondary); margin-top: 5px;">Ingat: IPK penting, tapi skill lebih penting! 💪</p>
+            <a href="https://github.com/okabeRintarou26" target="_blank" rel="noopener noreferrer" class="footer-github-btn" aria-label="Kunjungi GitHub okabeRintarou26">
+                <span aria-hidden="true">🐙</span>
+                <span>Liat Source Code-nya</span>
+            </a>
+        </div>
+    </footer>
+
+    <script src="calculator.js"></script>
+</body>
+</html>
